@@ -2,7 +2,7 @@
 # Land Administration System
 
 [build]
-  command = "npm install && npm run build"
+  command = "npm install --legacy-peer-deps && npm run build"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
