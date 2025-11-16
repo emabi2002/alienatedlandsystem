@@ -5,6 +5,12 @@
 -- So we create views in public that query land_admin tables
 -- =============================================
 
+-- View: Provinces
+CREATE OR REPLACE VIEW public.provinces_view AS
+SELECT * FROM land_admin.provinces ORDER BY name;
+
+GRANT SELECT ON public.provinces_view TO authenticated, anon;
+
 -- View: Application Summary
 CREATE OR REPLACE VIEW public.application_summary AS
 SELECT

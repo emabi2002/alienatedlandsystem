@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { FileText, Send, CheckCircle, AlertCircle } from 'lucide-react'
-import { db } from '@/lib/supabase'
+import { db, supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useRouter } from 'next/navigation'
 
@@ -36,7 +36,9 @@ export default function SubmitRequest() {
   // Load provinces from database
   useEffect(() => {
     async function loadProvinces() {
-      const { data } = await db.provinces().select('*').order('name')
+      const { data } = await supabase
+        .from('provinces_view')
+        .select('*')
       if (data) setProvinces(data)
     }
     loadProvinces()
@@ -52,9 +54,9 @@ export default function SubmitRequest() {
 
       // Prepare application data
       const applicationData = {
-        application_type: applicationType as any,
-        applicant_category: applicantCategory as any,
-        status: 'submitted' as any, // Changed from draft to submitted
+        application_type: applicationType,
+        applicant_category: applicantCategory,
+        status: 'submitted' as const,
 
         // Applicant Information
         company_name: applicantCategory === 'company' ? formData.get('companyName') as string : null,
@@ -76,7 +78,7 @@ export default function SubmitRequest() {
         development_description: formData.get('purpose') as string,
 
         // Financial Details
-        financing_method: financingMethod as any || null,
+        financing_method: financingMethod || null,
         estimated_development_value: formData.get('estimatedValue')
           ? parseFloat(formData.get('estimatedValue') as string)
           : null,
@@ -85,16 +87,36 @@ export default function SubmitRequest() {
         submitted_at: new Date().toISOString(),
       }
 
-      // Insert into database
-      const { data, error } = await db.applications()
-        .insert(applicationData)
-        .select()
-        .single()
+      // Insert into database using RPC function
+      // @ts-expect-error - RPC function types not generated yet
+      const { data: insertResult, error } = await supabase.rpc('insert_application', {
+        p_application_type: applicationData.application_type,
+        p_applicant_category: applicationData.applicant_category,
+        p_status: applicationData.status,
+        p_company_name: applicationData.company_name,
+        p_first_name: applicationData.first_name,
+        p_last_name: applicationData.last_name,
+        p_email: applicationData.email,
+        p_phone: applicationData.phone,
+        p_postal_address: applicationData.postal_address,
+        p_province_id: applicationData.province_id,
+        p_district: applicationData.district,
+        p_location_description: applicationData.location_description,
+        p_area_requested: applicationData.area_requested,
+        p_lease_duration_years: applicationData.lease_duration_years,
+        p_intended_use: applicationData.intended_use,
+        p_development_description: applicationData.development_description,
+        p_financing_method: applicationData.financing_method,
+        p_estimated_development_value: applicationData.estimated_development_value,
+        p_submitted_at: applicationData.submitted_at
+      })
+
+      const data = insertResult as { application_number: string } | null
 
       if (error) throw error
 
       // Success!
-      setApplicationNumber(data.application_number)
+      setApplicationNumber(data?.application_number || 'N/A')
       setSubmitSuccess(true)
 
       // Redirect after 3 seconds
@@ -102,9 +124,9 @@ export default function SubmitRequest() {
         router.push('/applications')
       }, 3000)
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error submitting application:', error)
-      setSubmitError(error.message || 'Failed to submit application. Please try again.')
+      setSubmitError(error instanceof Error ? error.message : 'Failed to submit application. Please try again.')
     } finally {
       setIsSubmitting(false)
     }

@@ -32,7 +32,7 @@ interface LandParcel {
   province_id: number | null
   district: string | null
   location_description: string
-  coordinates: any
+  coordinates: { type: string; coordinates: number[] } | null
   valuation_amount: number | null
 }
 
@@ -67,9 +67,9 @@ export default function GISPage() {
 
         setParcels(transformedData)
         setFilteredParcels(transformedData)
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error loading parcels:', err)
-        setError(err.message || 'Failed to load land parcels')
+        setError(err instanceof Error ? err.message : 'Failed to load land parcels')
       } finally {
         setLoading(false)
       }
@@ -106,7 +106,7 @@ export default function GISPage() {
   }
 
   // Parse coordinates from PostGIS format
-  const parseCoordinates = (geojson: any): [number, number] | null => {
+  const parseCoordinates = (geojson: { type: string; coordinates: number[] } | null): [number, number] | null => {
     if (!geojson) return null
     try {
       if (geojson.coordinates) {
@@ -136,7 +136,7 @@ export default function GISPage() {
         description: parcel.location_description
       }
     })
-    .filter(Boolean) as any[]
+    .filter((p): p is NonNullable<typeof p> => p !== null)
 
   if (loading) {
     return (
@@ -204,7 +204,7 @@ export default function GISPage() {
             <div className="h-[600px] w-full">
               <MapComponent
                 parcels={mapParcels}
-                onParcelSelect={(parcel: any) => {
+                onParcelSelect={(parcel) => {
                   const fullParcel = filteredParcels.find(p => Number(p.id) === parcel.id)
                   if (fullParcel) setSelectedParcel(fullParcel)
                 }}

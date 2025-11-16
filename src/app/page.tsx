@@ -394,8 +394,18 @@ export default function Dashboard() {
 }
 
 // Recent Activity Component
+interface RecentApplication {
+  id: string
+  application_number: string
+  applicant_name: string
+  application_type: string
+  status: string
+  submitted_at: string
+  created_at: string
+}
+
 function RecentActivity() {
-  const [applications, setApplications] = useState<any[]>([])
+  const [applications, setApplications] = useState<RecentApplication[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
